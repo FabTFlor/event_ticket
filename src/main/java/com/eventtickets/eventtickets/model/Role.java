@@ -15,7 +15,7 @@ public class Role {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // Ejemplo: "USER", "ADMIN"
+    private String name; // Ejemplo: "User", "Admin"
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)
     private List<User> users;
