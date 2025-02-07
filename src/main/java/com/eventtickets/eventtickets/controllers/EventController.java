@@ -1,6 +1,7 @@
 package com.eventtickets.eventtickets.controllers;
 
 import com.eventtickets.eventtickets.model.Event;
+import com.eventtickets.eventtickets.model.EventStatus;
 import com.eventtickets.eventtickets.model.Venue;
 import com.eventtickets.eventtickets.repositories.EventRepository;
 import com.eventtickets.eventtickets.repositories.VenueRepository;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -31,14 +33,36 @@ public class EventController {
         if (venue.isEmpty()) {
             response.put("ncode", 0);
             response.put("message", "El recinto no existe.");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // Validar estado del evento
+        String statusString = (String) request.get("status");
+        EventStatus status;
+        try {
+            status = EventStatus.valueOf(statusString.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            response.put("ncode", 0);
+            response.put("message", "Estado de evento no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // Validar fecha
+        String dateString = (String) request.get("date");
+        LocalDateTime date;
+        try {
+            date = LocalDateTime.parse(dateString);
+        } catch (Exception e) {
+            response.put("ncode", 0);
+            response.put("message", "Formato de fecha inválido. Usa formato ISO-8601 (YYYY-MM-DDTHH:MM:SS).");
+            return ResponseEntity.badRequest().body(response);
         }
 
         Event event = new Event();
         event.setName((String) request.get("name"));
         event.setVenue(venue.get());
-        event.setDate((request.get("date") != null) ? java.time.LocalDateTime.parse((String) request.get("date")) : null);
-        event.setStatus((String) request.get("status"));
+        event.setDate(date);
+        event.setStatus(status);
         event.setEventInfo((String) request.get("eventInfo"));
 
         Event savedEvent = eventRepository.save(event);
@@ -48,6 +72,24 @@ public class EventController {
         response.put("eventId", savedEvent.getId());
         return ResponseEntity.status(201).body(response);
     }
+
+    // 📌 Obtener un evento por ID
+@GetMapping("/{id}")
+public ResponseEntity<Map<String, Object>> getEventById(@PathVariable Long id) {
+    Map<String, Object> response = new HashMap<>();
+    
+    Optional<Event> event = eventRepository.findById(id);
+    if (event.isEmpty()) {
+        response.put("ncode", 0);
+        response.put("message", "Evento no encontrado.");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    response.put("ncode", 1);
+    response.put("event", event.get());
+    return ResponseEntity.ok(response);
+}
+
 
     // 📌 Obtener todos los eventos
     @GetMapping("/all")
@@ -60,14 +102,90 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+    // 📌 Actualizar un evento por ID
+@PutMapping("/{id}")
+public ResponseEntity<Map<String, Object>> updateEvent(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+    Map<String, Object> response = new HashMap<>();
+
+    Optional<Event> existingEvent = eventRepository.findById(id);
+    if (existingEvent.isEmpty()) {
+        response.put("ncode", 0);
+        response.put("message", "Evento no encontrado.");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    Event event = existingEvent.get();
+
+    // Actualizar nombre si se proporciona
+    if (request.containsKey("name")) {
+        event.setName((String) request.get("name"));
+    }
+
+    // Actualizar recinto si se proporciona
+    if (request.containsKey("venueId")) {
+        Long venueId = ((Number) request.get("venueId")).longValue();
+        Optional<Venue> venue = venueRepository.findById(venueId);
+        if (venue.isPresent()) {
+            event.setVenue(venue.get());
+        } else {
+            response.put("ncode", 0);
+            response.put("message", "El recinto especificado no existe.");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Actualizar fecha si se proporciona
+    if (request.containsKey("date")) {
+        try {
+            event.setDate(LocalDateTime.parse((String) request.get("date")));
+        } catch (Exception e) {
+            response.put("ncode", 0);
+            response.put("message", "Formato de fecha inválido. Usa formato ISO-8601 (YYYY-MM-DDTHH:MM:SS).");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Actualizar estado si se proporciona
+    if (request.containsKey("status")) {
+        try {
+            event.setStatus(EventStatus.valueOf(((String) request.get("status")).toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            response.put("ncode", 0);
+            response.put("message", "Estado de evento no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // Actualizar información del evento si se proporciona
+    if (request.containsKey("eventInfo")) {
+        event.setEventInfo((String) request.get("eventInfo"));
+    }
+
+    // Guardar cambios
+    eventRepository.save(event);
+
+    response.put("ncode", 1);
+    response.put("message", "Evento actualizado exitosamente.");
+    response.put("eventId", event.getId());
+    return ResponseEntity.ok(response);
+}
+
+
     // 📌 Obtener eventos por estado
     @GetMapping("/status/{status}")
     public ResponseEntity<Map<String, Object>> getEventsByStatus(@PathVariable String status) {
         Map<String, Object> response = new HashMap<>();
-        List<Event> events = eventRepository.findByStatus(status);
 
-        response.put("ncode", 1);
-        response.put("events", events);
-        return ResponseEntity.ok(response);
+        try {
+            EventStatus eventStatus = EventStatus.valueOf(status.toUpperCase());
+            List<Event> events = eventRepository.findByStatus(eventStatus);
+            response.put("ncode", 1);
+            response.put("events", events);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("ncode", 0);
+            response.put("message", "Estado no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 }

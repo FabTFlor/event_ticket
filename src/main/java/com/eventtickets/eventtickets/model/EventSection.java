@@ -3,7 +3,6 @@ package com.eventtickets.eventtickets.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.util.List;
 
 @Entity
 @Getter
@@ -27,11 +26,16 @@ public class EventSection {
     private double price;
 
     @Column(nullable = false)
-    private int remainingTickets;
-
-    @Column(nullable = false)
     private boolean isNumbered;
 
-    @OneToMany(mappedBy = "eventSection", cascade = CascadeType.ALL)
-    private List<EventSeat> eventSeats;
+    @Column(nullable = true)
+    private Integer remainingTickets;
+
+    @PrePersist
+    @PreUpdate
+    private void validateRemainingTickets() {
+        if (!isNumbered && (remainingTickets == null || remainingTickets < 0)) {
+            remainingTickets = 0;
+        }
+    }
 }

@@ -24,11 +24,15 @@ public class VenueSeatController {
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createVenueSeats(@RequestBody Map<String, Object> request) {
         Map<String, Object> response = new HashMap<>();
+        int seatCount = 0; // Contador de asientos creados
+
 
         Long venueSectionId = Long.valueOf(request.get("venueSectionId").toString());
         int rows = Integer.parseInt(request.get("rows").toString());
         int columns = Integer.parseInt(request.get("columns").toString());
-        Map<String, Map<String, List<Integer>>> exceptions = (Map<String, Map<String, List<Integer>>>) request.get("exceptions");
+
+        // Obtener y validar las excepciones correctamente
+        Map<String, List<Integer>> exceptions = extractExceptions(request.get("exceptions"));
 
         Optional<VenueSection> venueSection = venueSectionRepository.findById(venueSectionId);
         if (venueSection.isEmpty()) {
@@ -46,21 +50,51 @@ public class VenueSeatController {
         for (int i = 1; i <= rows; i++) {
             String rowLabel = getRowLabel(i);
             for (int j = 1; j <= columns; j++) {
-                if (exceptions.containsKey(String.valueOf(i)) && exceptions.get(String.valueOf(i)).get("damagedSeats").contains(j)) {
+                if (exceptions.containsKey(String.valueOf(i)) && exceptions.get(String.valueOf(i)).contains(j)) {
                     continue; // Saltar asientos dañados
                 }
                 VenueSeat venueSeat = new VenueSeat();
                 venueSeat.setVenueSection(venueSection.get());
                 venueSeat.setSeatNumber(rowLabel + j);
                 venueSeatRepository.save(venueSeat);
+                seatCount++; // Incrementar contador
+
             }
         }
 
         response.put("ncode", 1);
         response.put("message", "Asientos creados exitosamente.");
+        response.put("totalSeatsCreated", seatCount); // Agregar total de asientos creados
         return ResponseEntity.status(201).body(response);
+        
     }
 
+    /**
+     * 📌 Método para extraer y validar el mapa de excepciones sin warnings.
+     */
+    private Map<String, List<Integer>> extractExceptions(Object exceptionsObj) {
+        Map<String, List<Integer>> exceptions = new HashMap<>();
+        if (exceptionsObj instanceof Map) {
+            Map<?, ?> tempMap = (Map<?, ?>) exceptionsObj;
+            for (Map.Entry<?, ?> entry : tempMap.entrySet()) {
+                if (entry.getKey() instanceof String && entry.getValue() instanceof List) {
+                    List<?> rawList = (List<?>) entry.getValue();
+                    List<Integer> intList = new ArrayList<>();
+                    for (Object obj : rawList) {
+                        if (obj instanceof Integer) {
+                            intList.add((Integer) obj);
+                        }
+                    }
+                    exceptions.put((String) entry.getKey(), intList);
+                }
+            }
+        }
+        return exceptions;
+    }
+
+    /**
+     * 📌 Genera etiquetas de filas con letras (A-Z, AA-ZZ...).
+     */
     private String getRowLabel(int rowNumber) {
         StringBuilder label = new StringBuilder();
         rowNumber--;
