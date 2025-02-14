@@ -1,5 +1,7 @@
 package com.eventtickets.eventtickets.model;
 
+import com.eventtickets.eventtickets.user.User;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
 
+import com.eventtickets.eventtickets.user.User;
+
 @Entity
 @Getter
 @Setter

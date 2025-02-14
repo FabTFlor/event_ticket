@@ -2,6 +2,8 @@ package com.eventtickets.eventtickets.controllers;
 
 import com.eventtickets.eventtickets.model.*;
 import com.eventtickets.eventtickets.repositories.*;
+import com.eventtickets.eventtickets.user.User;
+import com.eventtickets.eventtickets.user.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;

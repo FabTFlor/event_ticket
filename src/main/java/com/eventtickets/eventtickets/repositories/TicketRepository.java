@@ -1,8 +1,9 @@
 package com.eventtickets.eventtickets.repositories;
 
 import com.eventtickets.eventtickets.model.Ticket;
+import com.eventtickets.eventtickets.user.User;
 import com.eventtickets.eventtickets.model.EventSection;
-import com.eventtickets.eventtickets.model.User;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;

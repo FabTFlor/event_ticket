@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
 
+import com.eventtickets.eventtickets.user.User;
+
 @Entity
 @Getter
 @Setter
@@ -40,4 +42,5 @@ public class Ticket {
 
     @Column(nullable = false)
     private LocalDateTime purchaseDate = LocalDateTime.now();
+
 }

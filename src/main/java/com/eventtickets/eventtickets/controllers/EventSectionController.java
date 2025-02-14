@@ -4,12 +4,12 @@ import com.eventtickets.eventtickets.model.Event;
 import com.eventtickets.eventtickets.model.EventSection;
 import com.eventtickets.eventtickets.model.Ticket;
 import com.eventtickets.eventtickets.model.VenueSection;
-import com.eventtickets.eventtickets.model.User;
 import com.eventtickets.eventtickets.repositories.EventRepository;
 import com.eventtickets.eventtickets.repositories.EventSectionRepository;
 import com.eventtickets.eventtickets.repositories.VenueSectionRepository;
+import com.eventtickets.eventtickets.user.User;
+import com.eventtickets.eventtickets.user.UserRepository;
 import com.eventtickets.eventtickets.repositories.TicketRepository;
-import com.eventtickets.eventtickets.repositories.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -141,38 +141,43 @@ public ResponseEntity<Map<String, Object>> getCupos(@PathVariable Long eventSect
 
     
         // 📌 Cancelar una reserva y liberar cupos
-    @PostMapping("/cancel-reserva")
-    public ResponseEntity<Map<String, Object>> cancelReserva(@RequestBody Map<String, Object> request) {
-        Map<String, Object> response = new HashMap<>();
-        Long eventSectionId = ((Number) request.get("eventSectionId")).longValue();
-        Long userId = ((Number) request.get("userId")).longValue();
-        int quantity = ((Number) request.get("quantity")).intValue();
-
-        EventSection eventSection = eventSectionRepository.findById(eventSectionId)
-                .orElseThrow(() -> new IllegalArgumentException("Sección de evento no encontrada."));
-
-        List<Ticket> userTickets = ticketRepository.findByEventSectionIdAndUserId(eventSectionId, userId);
-
-        if (userTickets.size() < quantity) {
-            response.put("ncode", 0);
-            response.put("message", "No tienes suficientes tickets para cancelar.");
-            return ResponseEntity.badRequest().body(response);
+        @PostMapping("/cancel-reserva")
+        public ResponseEntity<Map<String, Object>> cancelReserva(@RequestBody Map<String, Object> request) {
+            Map<String, Object> response = new HashMap<>();
+            Long eventSectionId = ((Number) request.get("eventSectionId")).longValue();
+            Long userId = ((Number) request.get("userId")).longValue();
+            int quantity = ((Number) request.get("quantity")).intValue();
+        
+            EventSection eventSection = eventSectionRepository.findById(eventSectionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Sección de evento no encontrada."));
+        
+            Event event = eventSection.getEvent();
+        
+            List<Ticket> userTickets = ticketRepository.findByEventSectionIdAndUserId(eventSectionId, userId);
+        
+            if (userTickets.size() < quantity) {
+                response.put("ncode", 0);
+                response.put("message", "No tienes suficientes tickets para cancelar.");
+                return ResponseEntity.badRequest().body(response);
+            }
+        
+            for (int i = 0; i < quantity; i++) {
+                ticketRepository.delete(userTickets.get(i));
+            }
+        
+            eventSection.setRemainingTickets(eventSection.getRemainingTickets() + quantity);
+            eventSectionRepository.save(eventSection);
+        
+            event.setTotalTicketsSold(event.getTotalTicketsSold() - quantity);
+            eventRepository.save(event);
+        
+            response.put("ncode", 1);
+            response.put("message", "Reserva cancelada, cupos liberados.");
+            response.put("remainingTickets", eventSection.getRemainingTickets());
+            response.put("totalTicketsSold", event.getTotalTicketsSold());
+            return ResponseEntity.ok(response);
         }
-
-        // Eliminar los tickets de la base de datos
-        for (int i = 0; i < quantity; i++) {
-            ticketRepository.delete(userTickets.get(i));
-        }
-
-        // Incrementar los cupos disponibles en la sección del evento
-        eventSection.setRemainingTickets(eventSection.getRemainingTickets() + quantity);
-        eventSectionRepository.save(eventSection);
-
-        response.put("ncode", 1);
-        response.put("message", "Reserva cancelada, cupos liberados.");
-        response.put("remainingTickets", eventSection.getRemainingTickets());
-        return ResponseEntity.ok(response);
-    }
+        
 
         // 📌 Obtener Secciones de un Evento
 @GetMapping("/event/{eventId}")
@@ -206,51 +211,56 @@ public ResponseEntity<Map<String, Object>> getEventSections(@PathVariable Long e
 
     // 📌 Reservar cupos en una sección no numerada (Compra de tickets)
     @PostMapping("/reserve-cupos")
-    public ResponseEntity<Map<String, Object>> reserveCupos(@RequestBody Map<String, Object> request) {
-        Map<String, Object> response = new HashMap<>();
+public ResponseEntity<Map<String, Object>> reserveCupos(@RequestBody Map<String, Object> request) {
+    Map<String, Object> response = new HashMap<>();
 
-        Long eventSectionId = ((Number) request.get("eventSectionId")).longValue();
-        Long userId = ((Number) request.get("userId")).longValue();
-        int quantity = ((Number) request.get("quantity")).intValue();
+    Long eventSectionId = ((Number) request.get("eventSectionId")).longValue();
+    Long userId = ((Number) request.get("userId")).longValue();
+    int quantity = ((Number) request.get("quantity")).intValue();
 
-        EventSection eventSection = eventSectionRepository.findById(eventSectionId)
-                .orElseThrow(() -> new IllegalArgumentException("Sección de evento no encontrada."));
+    EventSection eventSection = eventSectionRepository.findById(eventSectionId)
+            .orElseThrow(() -> new IllegalArgumentException("Sección de evento no encontrada."));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
 
-        if (eventSection.isNumbered()) {
-            response.put("ncode", 0);
-            response.put("message", "No puedes comprar cupos en una sección numerada.");
-            return ResponseEntity.badRequest().body(response);
-        }
+    Event event = eventSection.getEvent();
 
-        if (eventSection.getRemainingTickets() < quantity) {
-            response.put("ncode", 0);
-            response.put("message", "No hay suficientes cupos disponibles.");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        // Descontar cupos disponibles
-        eventSection.setRemainingTickets(eventSection.getRemainingTickets() - quantity);
-        eventSectionRepository.save(eventSection);
-
-        // Registrar los tickets en la base de datos
-        for (int i = 0; i < quantity; i++) {
-            Ticket ticket = new Ticket();
-            ticket.setEvent(eventSection.getEvent());
-            ticket.setEventSection(eventSection);
-            ticket.setUser(user);
-            ticket.setOriginalOwner(user);
-            ticket.setPurchaseDate(LocalDateTime.now());
-            ticketRepository.save(ticket);
-        }
-
-        response.put("ncode", 1);
-        response.put("message", "Compra realizada con éxito.");
-        response.put("remainingTickets", eventSection.getRemainingTickets());
-        return ResponseEntity.ok(response);
+    if (eventSection.isNumbered()) {
+        response.put("ncode", 0);
+        response.put("message", "No puedes comprar cupos en una sección numerada.");
+        return ResponseEntity.badRequest().body(response);
     }
+
+    if (eventSection.getRemainingTickets() < quantity) {
+        response.put("ncode", 0);
+        response.put("message", "No hay suficientes cupos disponibles.");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    eventSection.setRemainingTickets(eventSection.getRemainingTickets() - quantity);
+    eventSectionRepository.save(eventSection);
+
+    for (int i = 0; i < quantity; i++) {
+        Ticket ticket = new Ticket();
+        ticket.setEvent(event);
+        ticket.setEventSection(eventSection);
+        ticket.setUser(user);
+        ticket.setOriginalOwner(user);
+        ticket.setPurchaseDate(LocalDateTime.now());
+        ticketRepository.save(ticket);
+    }
+
+    event.setTotalTicketsSold(event.getTotalTicketsSold() + quantity);
+    eventRepository.save(event);
+
+    response.put("ncode", 1);
+    response.put("message", "Compra realizada con éxito.");
+    response.put("remainingTickets", eventSection.getRemainingTickets());
+    response.put("totalTicketsSold", event.getTotalTicketsSold());
+    return ResponseEntity.ok(response);
+}
+
 
 
 

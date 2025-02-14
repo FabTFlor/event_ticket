@@ -35,4 +35,10 @@ public class Event {
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL)
     private List<EventSection> eventSections;
+
+    @Column(nullable = true) // Permite valores nulos si no hay imagen
+    private String imageUrl; // URL de la imagen del evento
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int totalTicketsSold;
 }

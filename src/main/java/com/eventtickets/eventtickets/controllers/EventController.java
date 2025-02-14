@@ -23,55 +23,63 @@ public class EventController {
     private VenueRepository venueRepository;
 
     // 📌 Crear un evento
-    @PostMapping("/create")
-    public ResponseEntity<Map<String, Object>> createEvent(@RequestBody Map<String, Object> request) {
-        Map<String, Object> response = new HashMap<>();
+@PostMapping("/create")
+public ResponseEntity<Map<String, Object>> createEvent(@RequestBody Map<String, Object> request) {
+    Map<String, Object> response = new HashMap<>();
 
-        Long venueId = ((Number) request.get("venueId")).longValue();
-        Optional<Venue> venue = venueRepository.findById(venueId);
+    Long venueId = ((Number) request.get("venueId")).longValue();
+    Optional<Venue> venue = venueRepository.findById(venueId);
 
-        if (venue.isEmpty()) {
-            response.put("ncode", 0);
-            response.put("message", "El recinto no existe.");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        // Validar estado del evento
-        String statusString = (String) request.get("status");
-        EventStatus status;
-        try {
-            status = EventStatus.valueOf(statusString.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            response.put("ncode", 0);
-            response.put("message", "Estado de evento no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        // Validar fecha
-        String dateString = (String) request.get("date");
-        LocalDateTime date;
-        try {
-            date = LocalDateTime.parse(dateString);
-        } catch (Exception e) {
-            response.put("ncode", 0);
-            response.put("message", "Formato de fecha inválido. Usa formato ISO-8601 (YYYY-MM-DDTHH:MM:SS).");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        Event event = new Event();
-        event.setName((String) request.get("name"));
-        event.setVenue(venue.get());
-        event.setDate(date);
-        event.setStatus(status);
-        event.setEventInfo((String) request.get("eventInfo"));
-
-        Event savedEvent = eventRepository.save(event);
-
-        response.put("ncode", 1);
-        response.put("message", "Evento creado exitosamente.");
-        response.put("eventId", savedEvent.getId());
-        return ResponseEntity.status(201).body(response);
+    if (venue.isEmpty()) {
+        response.put("ncode", 0);
+        response.put("message", "El recinto no existe.");
+        return ResponseEntity.badRequest().body(response);
     }
+
+    // Validar estado del evento
+    String statusString = (String) request.get("status");
+    EventStatus status;
+    try {
+        status = EventStatus.valueOf(statusString.toUpperCase());
+    } catch (IllegalArgumentException e) {
+        response.put("ncode", 0);
+        response.put("message", "Estado de evento no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    // Validar fecha
+    String dateString = (String) request.get("date");
+    LocalDateTime date;
+    try {
+        date = LocalDateTime.parse(dateString);
+    } catch (Exception e) {
+        response.put("ncode", 0);
+        response.put("message", "Formato de fecha inválido. Usa formato ISO-8601 (YYYY-MM-DDTHH:MM:SS).");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    Event event = new Event();
+    event.setName((String) request.get("name"));
+    event.setVenue(venue.get());
+    event.setDate(date);
+    event.setStatus(status);
+    event.setEventInfo((String) request.get("eventInfo"));
+
+    // ✅ Agregar el campo `imageUrl` si está presente en la solicitud
+    if (request.containsKey("imageUrl")) {
+        event.setImageUrl((String) request.get("imageUrl"));
+    }
+
+    Event savedEvent = eventRepository.save(event);
+
+    response.put("ncode", 1);
+    response.put("message", "Evento creado exitosamente.");
+    response.put("eventId", savedEvent.getId());
+    response.put("imageUrl", savedEvent.getImageUrl()); // ✅ Incluir la imagen en la respuesta
+
+    return ResponseEntity.status(201).body(response);
+}
+
 
     // 📌 Obtener un evento por ID
 @GetMapping("/{id}")
@@ -97,10 +105,25 @@ public ResponseEntity<Map<String, Object>> getEventById(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
         List<Event> events = eventRepository.findAll();
 
+        List<Map<String, Object>> eventsList = new ArrayList<>();
+        for (Event event : events) {
+            Map<String, Object> eventData = new HashMap<>();
+            eventData.put("eventId", event.getId());
+            eventData.put("name", event.getName());
+            eventData.put("venue", event.getVenue());
+            eventData.put("date", event.getDate());
+            eventData.put("status", event.getStatus());
+            eventData.put("eventInfo", event.getEventInfo());
+            eventData.put("imageUrl", event.getImageUrl());
+            eventData.put("totalTicketsSold", event.getTotalTicketsSold());
+            eventsList.add(eventData);
+        }
+
         response.put("ncode", 1);
-        response.put("events", events);
+        response.put("events", eventsList);
         return ResponseEntity.ok(response);
     }
+
 
     // 📌 Actualizar un evento por ID
 @PutMapping("/{id}")
