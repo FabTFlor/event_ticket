@@ -179,35 +179,34 @@ public ResponseEntity<Map<String, Object>> getCupos(@PathVariable Long eventSect
         }
         
 
-        // 📌 Obtener Secciones de un Evento
-@GetMapping("/event/{eventId}")
-public ResponseEntity<Map<String, Object>> getEventSections(@PathVariable Long eventId) {
-    Map<String, Object> response = new HashMap<>();
-    List<EventSection> eventSections = eventSectionRepository.findByEventId(eventId);
-
-    if (eventSections.isEmpty()) {
-        response.put("ncode", 0);
-        response.put("message", "No se encontraron secciones para este evento.");
-        return ResponseEntity.ok(response);
-    }
-
-    // Convertimos a una estructura más limpia en la respuesta
-    List<Map<String, Object>> sectionsList = new ArrayList<>();
-    for (EventSection section : eventSections) {
-        Map<String, Object> sectionData = new HashMap<>();
-        sectionData.put("id", section.getId());
-        sectionData.put("eventId", section.getEvent().getId());
-        sectionData.put("venueSectionId", section.getVenueSection().getId());
-        sectionData.put("price", section.getPrice());
-        sectionData.put("isNumbered", section.isNumbered());
-        sectionData.put("remainingTickets", section.isNumbered() ? null : section.getRemainingTickets());
-        sectionsList.add(sectionData);
-    }
-
-    response.put("ncode", 1);
-    response.put("eventSections", sectionsList);
-    return ResponseEntity.ok(response);
-}
+        @GetMapping("/event/{eventId}")
+        public ResponseEntity<Map<String, Object>> getEventSections(@PathVariable Long eventId) {
+            Map<String, Object> response = new HashMap<>();
+            List<EventSection> eventSections = eventSectionRepository.findByEventId(eventId);
+    
+            if (eventSections.isEmpty()) {
+                response.put("ncode", 0);
+                response.put("message", "No se encontraron secciones para este evento.");
+                return ResponseEntity.ok(response);
+            }
+    
+            // Convertimos a una estructura más limpia en la respuesta
+            List<Map<String, Object>> sectionsList = new ArrayList<>();
+            for (EventSection section : eventSections) {
+                Map<String, Object> sectionData = new HashMap<>();
+                sectionData.put("id", section.getId());
+                sectionData.put("eventId", section.getEvent().getId());
+                sectionData.put("venueSectionName", section.getVenueSection().getSectionType().getName()); // Obtener el nombre de la secci\u00f3n
+                sectionData.put("price", section.getPrice());
+                sectionData.put("isNumbered", section.isNumbered());
+                sectionData.put("remainingTickets", section.isNumbered() ? null : section.getRemainingTickets());
+                sectionsList.add(sectionData);
+            }
+    
+            response.put("ncode", 1);
+            response.put("eventSections", sectionsList);
+            return ResponseEntity.ok(response);
+        }
 
     // 📌 Reservar cupos en una sección no numerada (Compra de tickets)
     @PostMapping("/reserve-cupos")

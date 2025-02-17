@@ -36,27 +36,31 @@ public class SecurityConfig {
     private final TokenRepository tokenRepository;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Habilitar CORS
-            .authorizeHttpRequests(req ->
-                req.requestMatchers("/auth/**", "/api/events/all") // Permitir acceso sin autenticación a estas rutas
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated()
-            )
-            .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
-            .authenticationProvider(authenticationProvider)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .logout(logout ->
-                logout.logoutUrl("/auth/logout")
-                    .addLogoutHandler(this::logout)
-                    .logoutSuccessHandler((request, response, authentication) -> SecurityContextHolder.clearContext())
-            );
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(AbstractHttpConfigurer::disable)
+        .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Habilitar CORS
+        .authorizeHttpRequests(req ->
+            req.requestMatchers(
+                "/auth/**",
+                "/api/events/all",
+                "/api/event-sections/event/**" // ✅ Permitir acceso sin autenticación a este endpoint
+            ).permitAll()
+            .anyRequest()
+            .authenticated()
+        )
+        .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
+        .authenticationProvider(authenticationProvider)
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .logout(logout ->
+            logout.logoutUrl("/auth/logout")
+                .addLogoutHandler(this::logout)
+                .logoutSuccessHandler((request, response, authentication) -> SecurityContextHolder.clearContext())
+        );
 
-        return http.build();
-    }
+    return http.build();
+}
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
