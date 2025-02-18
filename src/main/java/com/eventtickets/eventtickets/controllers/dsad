@@ -1,0 +1,160 @@
+import React, { useState } from "react";
+import { useFetchEventById } from "../../hooks/useFetchEvents";
+import useFetchEventSections from "../../hooks/useFetchEventSections";
+import { purchaseTicket } from "../../api/ticketApi"; // ✅ Importar la API de compra
+import "./EventModal.css";
+
+const EventModal = ({ eventId, onClose }) => {
+  const { data: event, isLoading, isError } = useFetchEventById(eventId);
+  const { sections, isLoading: sectionsLoading } = useFetchEventSections(eventId);
+
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [ticketQuantity, setTicketQuantity] = useState(1);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
+
+  // ✅ Verificar si el usuario está autenticado
+  const isAuthenticated = !!localStorage.getItem("access_token");
+
+  // 🔹 Seleccionar una sección y resetear cantidad
+  const handleSelectSection = (section) => {
+    setSelectedSection(section);
+    setTicketQuantity(1);
+  };
+
+  // 🔹 Cambiar la cantidad de boletos
+  const handleQuantityChange = (change) => {
+    setTicketQuantity((prev) => Math.max(1, prev + change));
+  };
+
+  // 🔹 Calcular el total de la compra
+  const calculateTotal = () => {
+    return selectedSection ? selectedSection.price * ticketQuantity : 0;
+  };
+
+  // 🔹 Realizar la compra del ticket
+  const handlePurchase = async () => {
+    if (!selectedSection || ticketQuantity === 0) return;
+
+    try {
+      await purchaseTicket(selectedSection.id, ticketQuantity);
+      setPurchaseSuccess(true); // ✅ Si la compra es exitosa, mostramos el mensaje de éxito
+    } catch (error) {
+      console.error("Error al comprar ticket:", error);
+      alert("Hubo un problema con la compra. Intenta nuevamente.");
+    }
+  };
+
+  // 🔹 Si el evento está cargando, mostrar mensaje de carga
+  if (isLoading || sectionsLoading) {
+    return (
+      <div className="event-modal-overlay">
+        <div className="event-modal-content">
+          <button className="event-close-button" onClick={onClose}>&times;</button>
+          Cargando detalles...
+        </div>
+      </div>
+    );
+  }
+
+  // 🔹 Si hay un error en la carga del evento, mostrar error
+  if (isError) {
+    return (
+      <div className="event-modal-overlay">
+        <div className="event-modal-content">
+          <button className="event-close-button" onClick={onClose}>&times;</button>
+          Error al cargar el evento.
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) return null;
+
+  return (
+    <div className="event-modal-overlay" onClick={onClose}>
+      <div className="event-modal-content" onClick={(e) => e.stopPropagation()}>
+        <button className="event-close-button" onClick={onClose}>&times;</button>
+
+        {/* 🔹 Si la compra es exitosa, solo mostramos el mensaje de éxito */}
+        {purchaseSuccess ? (
+          <>
+            <h2>{event.name}</h2>
+            <img src={event.imageUrl} alt={event.name} className="event-image" />
+            <p className="purchase-success-message">
+              Compra de {ticketQuantity} ticket(s) exitosa.
+            </p>
+            <button className="event-close-button-main" onClick={onClose}>
+              Cerrar
+            </button>
+          </>
+        ) : (
+          <>
+            {/* 🔹 Nombre del evento e imagen */}
+            <h2>{event.name}</h2>
+            <img src={event.imageUrl} alt={event.name} className="event-image" />
+
+            {/* 🔹 Secciones dinámicas */}
+            {sections.length > 0 && (
+              <>
+                <h3>Selecciona una sección</h3>
+
+                <div className="event-sections">
+                <img src={"/assets/mapa-caupolican.png"} alt={event.name} className="map-image" />
+                  {sections.map((section) => (
+                    <div key={section.id} className="event-section-item">
+                      <span className="section-name">{section.venueSectionName}</span>
+                      <span className="section-price">${section.price.toLocaleString()}</span>
+                      <span className="section-available">{section.remainingTickets} disponibles</span>
+                      <button
+                        className={`event-section-button ${selectedSection?.id === section.id ? "selected" : ""}`}
+                        onClick={() => handleSelectSection(section)}
+                      >
+                        {selectedSection?.id === section.id ? "Seleccionado" : "Seleccionar"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 🔹 Controles de cantidad solo si hay una sección seleccionada */}
+            {selectedSection && (
+              <div className="ticket-controls">
+                <h3>Seleccionaste: {selectedSection.venueSectionName}</h3>
+                <div className="ticket-counter">
+                  <button className="ticket-button minus" onClick={() => handleQuantityChange(-1)} disabled={ticketQuantity === 1}>
+                    -
+                  </button>
+                  <span className="ticket-quantity">{ticketQuantity}</span>
+                  <button
+                    className="ticket-button plus"
+                    onClick={() => handleQuantityChange(1)}
+                    disabled={ticketQuantity >= selectedSection.remainingTickets}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 🔹 Total de la compra */}
+            {selectedSection && (
+              <h3>Total: ${calculateTotal().toLocaleString()}</h3>
+            )}
+
+            {/* 🔹 Botón de compra */}
+            <button
+              className="event-purchase-button"
+              onClick={isAuthenticated ? handlePurchase : onClose}
+              disabled={!selectedSection || ticketQuantity === 0}
+            >
+              {!isAuthenticated ? "Inicia sesión para comprar" : "Comprar"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default EventModal;

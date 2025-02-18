@@ -1,6 +1,5 @@
 package com.eventtickets.eventtickets.services;
 
-
 import com.eventtickets.eventtickets.security.AuthRequest;
 import com.eventtickets.eventtickets.security.RegisterRequest;
 import com.eventtickets.eventtickets.security.TokenResponse;
@@ -39,7 +38,7 @@ public class AuthService {
         final String refreshToken = jwtService.generateRefreshToken(savedUser);
 
         saveUserToken(savedUser, jwtToken);
-        return new TokenResponse(jwtToken, refreshToken);
+        return new TokenResponse(savedUser.getId(), jwtToken, refreshToken); // ✅ Agregamos userId
     }
 
     public TokenResponse authenticate(final AuthRequest request) {
@@ -55,7 +54,7 @@ public class AuthService {
         final String refreshToken = jwtService.generateRefreshToken(user);
         revokeAllUserTokens(user);
         saveUserToken(user, accessToken);
-        return new TokenResponse(accessToken, refreshToken);
+        return new TokenResponse(user.getId(), accessToken, refreshToken); // ✅ Agregamos userId
     }
 
     private void saveUserToken(User user, String jwtToken) {
@@ -101,6 +100,6 @@ public class AuthService {
         revokeAllUserTokens(user);
         saveUserToken(user, accessToken);
 
-        return new TokenResponse(accessToken, refreshToken);
+        return new TokenResponse(user.getId(), accessToken, refreshToken); // ✅ Agregamos userId
     }
 }

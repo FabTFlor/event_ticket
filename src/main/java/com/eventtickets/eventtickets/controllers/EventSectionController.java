@@ -14,6 +14,8 @@ import com.eventtickets.eventtickets.repositories.TicketRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -208,57 +210,96 @@ public ResponseEntity<Map<String, Object>> getCupos(@PathVariable Long eventSect
             return ResponseEntity.ok(response);
         }
 
-    // 📌 Reservar cupos en una sección no numerada (Compra de tickets)
-    @PostMapping("/reserve-cupos")
-public ResponseEntity<Map<String, Object>> reserveCupos(@RequestBody Map<String, Object> request) {
-    Map<String, Object> response = new HashMap<>();
+ // 📌 Reservar cupos en una sección no numerada (Compra de tickets)
+ @PostMapping("/reserve-cupos")
+ public ResponseEntity<Map<String, Object>> reserveCupos(@RequestBody Map<String, Object> request) {
+     Map<String, Object> response = new HashMap<>();
 
-    Long eventSectionId = ((Number) request.get("eventSectionId")).longValue();
-    Long userId = ((Number) request.get("userId")).longValue();
-    int quantity = ((Number) request.get("quantity")).intValue();
+     try {
+         // Obtener usuario autenticado desde el token JWT
+         String email = getAuthenticatedUserEmail();
+         User user = userRepository.findByEmail(email)
+                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
-    EventSection eventSection = eventSectionRepository.findById(eventSectionId)
-            .orElseThrow(() -> new IllegalArgumentException("Sección de evento no encontrada."));
+         // Obtener ID de la sección y cantidad de tickets solicitados
+         Long eventSectionId = ((Number) request.get("eventSectionId")).longValue();
+         int quantity = ((Number) request.get("quantity")).intValue();
 
-    User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+         // Buscar la sección del evento
+         EventSection eventSection = eventSectionRepository.findById(eventSectionId)
+                 .orElseThrow(() -> new IllegalArgumentException("Sección de evento no encontrada."));
+         Event event = eventSection.getEvent();
 
-    Event event = eventSection.getEvent();
+         // Validar que el evento esté activo
+         if (!event.getStatus().name().equals("ACTIVE")) {
+             response.put("ncode", 0);
+             response.put("message", "No se pueden comprar entradas para un evento inactivo.");
+             response.put("message", "No se pueden comprar entradas para un evento inactivo. Estado actual: " + event.getStatus());
+             return ResponseEntity.badRequest().body(response);
+         }
 
-    if (eventSection.isNumbered()) {
-        response.put("ncode", 0);
-        response.put("message", "No puedes comprar cupos en una sección numerada.");
-        return ResponseEntity.badRequest().body(response);
-    }
+         // Validar que la sección no sea numerada
+         if (eventSection.isNumbered()) {
+             response.put("ncode", 0);
+             response.put("message", "No puedes comprar cupos en una sección numerada.");
+             return ResponseEntity.badRequest().body(response);
+         }
 
-    if (eventSection.getRemainingTickets() < quantity) {
-        response.put("ncode", 0);
-        response.put("message", "No hay suficientes cupos disponibles.");
-        return ResponseEntity.badRequest().body(response);
-    }
+         // Validar si hay suficientes cupos disponibles
+         if (eventSection.getRemainingTickets() < quantity) {
+             response.put("ncode", 0);
+             response.put("message", "No hay suficientes cupos disponibles.");
+             return ResponseEntity.badRequest().body(response);
+         }
 
-    eventSection.setRemainingTickets(eventSection.getRemainingTickets() - quantity);
-    eventSectionRepository.save(eventSection);
+         // Descontar cupos disponibles
+         eventSection.setRemainingTickets(eventSection.getRemainingTickets() - quantity);
+         eventSectionRepository.save(eventSection);
 
-    for (int i = 0; i < quantity; i++) {
-        Ticket ticket = new Ticket();
-        ticket.setEvent(event);
-        ticket.setEventSection(eventSection);
-        ticket.setUser(user);
-        ticket.setOriginalOwner(user);
-        ticket.setPurchaseDate(LocalDateTime.now());
-        ticketRepository.save(ticket);
-    }
+         // Registrar los tickets en la base de datos
+         for (int i = 0; i < quantity; i++) {
+             Ticket ticket = new Ticket();
+             ticket.setEvent(event);
+             ticket.setEventSection(eventSection);
+             ticket.setUser(user);
+             ticket.setOriginalOwner(user);
+             ticket.setPurchaseDate(LocalDateTime.now());
+             ticketRepository.save(ticket);
+         }
 
-    event.setTotalTicketsSold(event.getTotalTicketsSold() + quantity);
-    eventRepository.save(event);
+         // Actualizar contador total de tickets vendidos en el evento
+         event.setTotalTicketsSold(event.getTotalTicketsSold() + quantity);
+         eventRepository.save(event);
 
-    response.put("ncode", 1);
-    response.put("message", "Compra realizada con éxito.");
-    response.put("remainingTickets", eventSection.getRemainingTickets());
-    response.put("totalTicketsSold", event.getTotalTicketsSold());
-    return ResponseEntity.ok(response);
-}
+         // Respuesta exitosa
+         response.put("ncode", 1);
+         response.put("message", "Compra realizada con éxito.");
+         response.put("remainingTickets", eventSection.getRemainingTickets());
+         response.put("totalTicketsSold", event.getTotalTicketsSold());
+         return ResponseEntity.ok(response);
+
+     } catch (Exception e) {
+         return handleException(e);
+     }
+ }
+
+ // 📌 Obtener el email del usuario autenticado desde el token JWT
+ private String getAuthenticatedUserEmail() {
+     Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+     if (principal instanceof UserDetails) {
+         return ((UserDetails) principal).getUsername();
+     } else {
+         return principal.toString();
+     }
+ }
+
+ // 📌 Manejo de errores
+ private ResponseEntity<Map<String, Object>> handleException(Exception e) {
+     Map<String, Object> response = new HashMap<>();
+     response.put("error", "Error procesando la solicitud");
+     response.put("message", e.getMessage());
+     return ResponseEntity.badRequest().body(response);
+ }
 
 
 
