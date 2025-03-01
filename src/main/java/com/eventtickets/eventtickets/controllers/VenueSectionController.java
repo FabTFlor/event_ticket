@@ -71,7 +71,6 @@ public class VenueSectionController {
         VenueSection venueSection = new VenueSection();
         venueSection.setVenue(venue.get());
         venueSection.setSectionType(sectionType.get());
-        venueSection.setTotalSeats(totalSeats);
         venueSection.setNumbered(isNumbered);
 
         VenueSection savedSection = venueSectionRepository.save(venueSection);
@@ -98,7 +97,6 @@ public class VenueSectionController {
             Map<String, Object> sectionData = new HashMap<>();
             sectionData.put("id", section.getId());
             sectionData.put("sectionType", section.getSectionType());
-            sectionData.put("totalSeats", section.getTotalSeats());
             sectionData.put("isNumbered", section.isNumbered());
             return sectionData;
         }).collect(Collectors.toList());
@@ -131,7 +129,6 @@ public class VenueSectionController {
                 response.put("message", "El número de asientos debe ser mayor a cero.");
                 return ResponseEntity.badRequest().body(response);
             }
-            venueSection.setTotalSeats(totalSeats);
         }
 
         if (request.containsKey("isNumbered")) {

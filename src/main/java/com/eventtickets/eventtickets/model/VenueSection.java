@@ -22,8 +22,6 @@ public class VenueSection {
     @JoinColumn(name = "section_type_id", nullable = false)
     private SectionType sectionType; // Tipo de sección (VIP, Platea, Cancha, etc.)
 
-    @Column(nullable = false)
-    private int totalSeats; // Número total de asientos en la sección
 
     @Column(nullable = false)
     private boolean isNumbered; // Indica si los asientos están numerados (true) o no (false)

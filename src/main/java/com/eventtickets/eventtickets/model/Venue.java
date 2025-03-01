@@ -23,9 +23,6 @@ public class Venue {
     @Column(nullable = false)
     private String location; // Dirección o ubicación
 
-    @Column(nullable = false)
-    private int capacity; // Capacidad máxima del recinto
-
     @JsonIgnore
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL)
     private List<Event> events; // Relación con eventos que se realizan en este recinto

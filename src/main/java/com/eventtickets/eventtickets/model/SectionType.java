@@ -16,7 +16,4 @@ public class SectionType {
 
     @Column(nullable = false, unique = true)
     private String name; // Ejemplo: VIP, Platea, General, Cancha
-
-    @Column(nullable = false)
-    private double defaultPrice; // Precio base por defecto
 }

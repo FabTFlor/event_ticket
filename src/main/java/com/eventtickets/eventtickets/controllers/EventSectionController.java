@@ -231,7 +231,7 @@ public ResponseEntity<Map<String, Object>> getCupos(@PathVariable Long eventSect
          Event event = eventSection.getEvent();
 
          // Validar que el evento esté activo
-         if (!event.getStatus().name().equals("ACTIVE")) {
+         if (!event.getStatus().getName().equals("ACTIVE")) {
              response.put("ncode", 0);
              response.put("message", "No se pueden comprar entradas para un evento inactivo.");
              response.put("message", "No se pueden comprar entradas para un evento inactivo. Estado actual: " + event.getStatus());

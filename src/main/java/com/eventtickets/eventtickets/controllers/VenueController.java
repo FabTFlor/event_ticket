@@ -87,7 +87,6 @@ public class VenueController {
         Venue existingVenue = venue.get();
         existingVenue.setName(venueDetails.getName());
         existingVenue.setLocation(venueDetails.getLocation());
-        existingVenue.setCapacity(venueDetails.getCapacity());
 
         venueRepository.save(existingVenue);
 

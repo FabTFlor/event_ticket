@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.eventtickets.eventtickets.user.User;
 
@@ -17,30 +18,37 @@ public class Ticket {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private String serialCode; // UUID único para cada ticket
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;  // Usuario que compró el ticket
+    private User user;  
 
     @ManyToOne
     @JoinColumn(name = "event_id", nullable = false)
-    private Event event; // Evento al que pertenece el ticket
+    private Event event; 
 
     @ManyToOne
     @JoinColumn(name = "event_section_id", nullable = false)
-    private EventSection eventSection; // Sección del evento
+    private EventSection eventSection;
 
     @ManyToOne
     @JoinColumn(name = "seat_id", nullable = true) 
-    private EventSeat seat; // Puede ser NULL si la sección no tiene asientos numerados
+    private EventSeat seat; 
 
     @ManyToOne
     @JoinColumn(name = "original_owner_id", nullable = false)
-    private User originalOwner; // Usuario original (para trazabilidad en transferencias)
+    private User originalOwner; 
 
     @Column(nullable = false)
-    private int transferCount = 0; // Cuántas veces ha sido transferido
+    private int transferCount = 0;
 
     @Column(nullable = false)
     private LocalDateTime purchaseDate = LocalDateTime.now();
 
+    @PrePersist
+    protected void generateSerialCode() {
+        this.serialCode = UUID.randomUUID().toString();
+    }
 }

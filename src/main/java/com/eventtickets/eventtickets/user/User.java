@@ -33,6 +33,12 @@ public class User {
   @Column(nullable = false)
   private String password;
 
+  @Column(nullable = true)
+  private String dni;
+
+  @Column(nullable = true)
+  private String phoneNumber;
+
   @OneToMany(mappedBy = "user")
   private List<Token> tokens;
 

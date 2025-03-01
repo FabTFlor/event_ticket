@@ -12,6 +12,7 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByUser(User user); // Obtener todas las entradas de un usuario
     List<Ticket> findByEventId(Long eventId); // Obtener todas las entradas de un evento
+    
 
     // Método para contar tickets vendidos en una sección de evento
     int countByEventSection(EventSection eventSection);

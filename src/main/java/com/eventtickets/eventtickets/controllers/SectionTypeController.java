@@ -32,12 +32,6 @@ public class SectionTypeController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // 🔄 Validación para precio positivo
-        if (sectionType.getDefaultPrice() <= 0) {
-            response.put("ncode", 3);
-            response.put("message", "El precio debe ser mayor a cero.");
-            return ResponseEntity.badRequest().body(response);
-        }
 
         // Guardar el tipo de sección
         sectionType.setName(sectionType.getName().toUpperCase()); // Normalizar nombres
@@ -104,15 +98,9 @@ public class SectionTypeController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // 🔄 Validar precio positivo
-        if (updatedType.getDefaultPrice() <= 0) {
-            response.put("ncode", 3);
-            response.put("message", "El precio debe ser mayor a cero.");
-            return ResponseEntity.badRequest().body(response);
-        }
+
 
         existingType.setName(updatedType.getName().toUpperCase());
-        existingType.setDefaultPrice(updatedType.getDefaultPrice());
 
         sectionTypeRepository.save(existingType);
         response.put("ncode", 1);

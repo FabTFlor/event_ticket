@@ -26,9 +26,10 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime date;
 
-    @Enumerated(EnumType.STRING) // Usar ENUM en lugar de String
-    @Column(nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "status_id", nullable = true)
     private EventStatus status;
+
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String eventInfo; // Información general del evento
@@ -38,6 +39,11 @@ public class Event {
 
     @Column(nullable = true) // Permite valores nulos si no hay imagen
     private String imageUrl; // URL de la imagen del evento
+
+    @Column(nullable = false, updatable = true)
+    private LocalDateTime createdAt;
+
+
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private int totalTicketsSold;
