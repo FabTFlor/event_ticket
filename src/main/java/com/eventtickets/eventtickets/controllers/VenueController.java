@@ -4,6 +4,7 @@ import com.eventtickets.eventtickets.model.Venue;
 import com.eventtickets.eventtickets.repositories.VenueRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -21,6 +22,7 @@ public class VenueController {
     /**
      * 📌 Obtener todos los recintos
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllVenues() {
         List<Venue> venues = venueRepository.findAll();
@@ -52,6 +54,7 @@ public class VenueController {
     /**
      * 📌 Registrar un nuevo recinto
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createVenue(@RequestBody Venue venue) {
         Map<String, Object> response = new HashMap<>();
@@ -73,6 +76,7 @@ public class VenueController {
     /**
      * 📌 Actualizar un recinto
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> updateVenue(@PathVariable Long id, @RequestBody Venue venueDetails) {
         Optional<Venue> venue = venueRepository.findById(id);

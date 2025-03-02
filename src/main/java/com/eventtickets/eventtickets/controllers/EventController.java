@@ -8,6 +8,7 @@ import com.eventtickets.eventtickets.repositories.EventStatusRepository;
 import com.eventtickets.eventtickets.repositories.VenueRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ public class EventController {
 
 
     // 📌 Crear un evento
+@PreAuthorize("hasRole('ADMIN')")
 @PostMapping("/create")
 public ResponseEntity<Map<String, Object>> createEvent(@RequestBody Map<String, Object> request) {
     Map<String, Object> response = new HashMap<>();
@@ -43,17 +45,13 @@ public ResponseEntity<Map<String, Object>> createEvent(@RequestBody Map<String, 
 
     // Validar estado del evento
     String statusString = (String) request.get("status");
-
-    // Buscar el estado en la base de datos
-    EventStatus status = eventStatusRepository.findByName(statusString.toUpperCase())
-    .orElse(null);
+    EventStatus status = eventStatusRepository.findByName(statusString.toUpperCase()).orElse(null);
 
     if (status == null) {
-    response.put("ncode", 0);
-    response.put("message", "Estado de evento no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
-    return ResponseEntity.badRequest().body(response);
+        response.put("ncode", 0);
+        response.put("message", "Estado de evento no válido. Usa: PENDING, ACTIVE, FINISHED, CANCELED.");
+        return ResponseEntity.badRequest().body(response);
     }
-
 
     // Validar fecha
     String dateString = (String) request.get("date");
@@ -73,6 +71,9 @@ public ResponseEntity<Map<String, Object>> createEvent(@RequestBody Map<String, 
     event.setStatus(status);
     event.setEventInfo((String) request.get("eventInfo"));
 
+    // ✅ Asignar `createdAt` antes de guardar
+    event.setCreatedAt(LocalDateTime.now());
+
     // ✅ Agregar el campo `imageUrl` si está presente en la solicitud
     if (request.containsKey("imageUrl")) {
         event.setImageUrl((String) request.get("imageUrl"));
@@ -87,6 +88,7 @@ public ResponseEntity<Map<String, Object>> createEvent(@RequestBody Map<String, 
 
     return ResponseEntity.status(201).body(response);
 }
+
 
 
     // 📌 Obtener un evento por ID
@@ -134,6 +136,7 @@ public ResponseEntity<Map<String, Object>> getEventById(@PathVariable Long id) {
 
 
     // 📌 Actualizar un evento por ID
+@PreAuthorize("hasRole('ADMIN')")
 @PutMapping("/{id}")
 public ResponseEntity<Map<String, Object>> updateEvent(@PathVariable Long id, @RequestBody Map<String, Object> request) {
     Map<String, Object> response = new HashMap<>();

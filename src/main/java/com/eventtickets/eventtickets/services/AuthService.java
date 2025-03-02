@@ -7,6 +7,8 @@ import com.eventtickets.eventtickets.user.User;
 import com.eventtickets.eventtickets.user.UserRepository;
 import com.eventtickets.eventtickets.security.Token;
 import com.eventtickets.eventtickets.security.TokenRepository;
+import com.eventtickets.eventtickets.model.Role;
+import com.eventtickets.eventtickets.repositories.RoleRepository;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -22,15 +24,26 @@ import java.util.List;
 public class AuthService {
     private final UserRepository repository;
     private final TokenRepository tokenRepository;
+    private final RoleRepository roleRepository; // Repositorio de roles
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
     public TokenResponse register(final RegisterRequest request) {
+        // Verificar si el email ya existe
+        if (repository.findByEmail(request.email()).isPresent()) {
+            throw new IllegalArgumentException("El email ya está registrado.");
+        }
+
+        // Obtener el rol por defecto (USER)
+        Role userRole = roleRepository.findById(1L)
+            .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+
         final User user = User.builder()
                 .name(request.name())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
+                .role(userRole)  // ✅ Asignar el rol "USER" por defecto
                 .build();
 
         final User savedUser = repository.save(user);

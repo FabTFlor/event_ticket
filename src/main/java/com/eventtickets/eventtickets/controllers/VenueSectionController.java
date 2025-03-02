@@ -8,6 +8,7 @@ import com.eventtickets.eventtickets.repositories.VenueSectionRepository;
 import com.eventtickets.eventtickets.repositories.SectionTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -30,13 +31,13 @@ public class VenueSectionController {
     private SectionTypeRepository sectionTypeRepository;
 
     // 📌 Crear una nueva sección en un recinto
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createVenueSection(@RequestBody Map<String, Object> request) {
         Map<String, Object> response = new HashMap<>();
 
         Long venueId = Long.valueOf(request.get("venueId").toString());
         Long sectionTypeId = Long.valueOf(request.get("sectionTypeId").toString());
-        int totalSeats = Integer.parseInt(request.get("totalSeats").toString());
         boolean isNumbered = Boolean.parseBoolean(request.get("isNumbered").toString());
 
         // Validar que el recinto y tipo de sección existan
@@ -49,12 +50,6 @@ public class VenueSectionController {
             return ResponseEntity.status(404).body(response);
         }
 
-        // Validar que el número de asientos sea positivo
-        if (totalSeats <= 0) {
-            response.put("ncode", 2);
-            response.put("message", "El número de asientos debe ser mayor a cero.");
-            return ResponseEntity.badRequest().body(response);
-        }
 
         // Validar que no exista una sección duplicada en el mismo recinto
         List<VenueSection> existingSections = venueSectionRepository.findByVenue(venue.get());
@@ -82,6 +77,7 @@ public class VenueSectionController {
     }
 
     // 📌 Obtener todas las secciones de un recinto específico (Formato mejorado)
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/venue/{venueId}")
     public ResponseEntity<Map<String, Object>> getVenueSections(@PathVariable Long venueId) {
         Map<String, Object> response = new HashMap<>();
@@ -121,15 +117,6 @@ public class VenueSectionController {
 
         VenueSection venueSection = venueSectionOpt.get();
 
-        // Actualizar campos si están presentes en la solicitud
-        if (request.containsKey("totalSeats")) {
-            int totalSeats = Integer.parseInt(request.get("totalSeats").toString());
-            if (totalSeats <= 0) {
-                response.put("ncode", 2);
-                response.put("message", "El número de asientos debe ser mayor a cero.");
-                return ResponseEntity.badRequest().body(response);
-            }
-        }
 
         if (request.containsKey("isNumbered")) {
             boolean isNumbered = Boolean.parseBoolean(request.get("isNumbered").toString());
@@ -144,6 +131,7 @@ public class VenueSectionController {
     }
 
     // 📌 Eliminar una sección existente
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> deleteVenueSection(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();

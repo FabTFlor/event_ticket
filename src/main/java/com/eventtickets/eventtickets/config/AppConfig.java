@@ -21,17 +21,20 @@ public class AppConfig {
     private final UserRepository repository;
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        return username -> {
-            final User user = repository.findByEmail(username)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-            return org.springframework.security.core.userdetails.User
-                    .builder()
-                    .username(user.getEmail())
-                    .password(user.getPassword())
-                    .build();
-        };
-    }
+public UserDetailsService userDetailsService() {
+    return username -> {
+        final User user = repository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return org.springframework.security.core.userdetails.User
+                .builder()
+                .username(user.getEmail())
+                .password(user.getPassword())
+                .authorities("ROLE_" + user.getRole().getName().toUpperCase()) // ✅ AÑADIR ROLES AQUÍ
+                .build();
+    };
+}
+
 
     @Bean
     public AuthenticationProvider authenticationProvider() {

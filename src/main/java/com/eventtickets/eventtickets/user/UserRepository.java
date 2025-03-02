@@ -1,11 +1,14 @@
 package com.eventtickets.eventtickets.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByEmail(String email); // Buscar usuario por email
+    @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)") // Forzar comparación en minúsculas
+    Optional<User> findByEmail(@Param("email") String email);
 }

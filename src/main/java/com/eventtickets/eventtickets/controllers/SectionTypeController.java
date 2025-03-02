@@ -4,6 +4,7 @@ import com.eventtickets.eventtickets.model.SectionType;
 import com.eventtickets.eventtickets.repositories.SectionTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -21,6 +22,7 @@ public class SectionTypeController {
     /**
      * 📍 Crear un nuevo tipo de sección
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<Map<String, Object>> createSectionType(@RequestBody SectionType sectionType) {
         Map<String, Object> response = new HashMap<>();
@@ -46,6 +48,7 @@ public class SectionTypeController {
     /**
      * 📍 Obtener todos los tipos de secciones
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllSectionTypes() {
         List<SectionType> sectionTypes = sectionTypeRepository.findAll();

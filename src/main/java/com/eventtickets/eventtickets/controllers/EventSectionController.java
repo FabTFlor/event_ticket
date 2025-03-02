@@ -14,6 +14,7 @@ import com.eventtickets.eventtickets.repositories.TicketRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -40,6 +41,7 @@ public class EventSectionController {
     private UserRepository userRepository;
 
         // 📌 Crear una nueva sección de evento
+        @PreAuthorize("hasRole('ADMIN')")
         @PostMapping("/create")
         public ResponseEntity<Map<String, Object>> createEventSection(@RequestBody Map<String, Object> request) {
             Map<String, Object> response = new HashMap<>();
